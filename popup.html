@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>X Follower Tracker</title>
+  <link rel="stylesheet" href="css/popup.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>X Follower Tracker</h1>
+      <p class="subtitle">ボタン1つで更新 / APIなし・ローカル保存</p>
+    </header>
+
+    <section class="dashboard" id="dashboard">
+      <div class="card-row">
+        <div class="card new">
+          <div class="card-num" id="dashNew">0</div>
+          <div class="card-label">新規フォロワー</div>
+        </div>
+        <div class="card lost">
+          <div class="card-num" id="dashLost">0</div>
+          <div class="card-label">解除された</div>
+        </div>
+      </div>
+      <div class="meta-row">
+        <span>保存数: <strong id="savedCount">0</strong></span>
+        <span>最終更新: <strong id="lastUpdate">未保存</strong></span>
+      </div>
+    </section>
+
+    <section class="status-card" id="statusCard">
+      <div id="pageStatus">読み込み中...</div>
+    </section>
+
+    <section class="actions">
+      <button id="btnUpdate" class="btn primary">データを更新する</button>
+      <div class="btn-row">
+        <button id="btnScanLoaded" class="btn secondary small">表示分だけ（ページ）</button>
+        <button id="btnAutoScan" class="btn secondary small">ページ自動取得</button>
+      </div>
+      <p class="hint">メインボタンはフォロワーページを開かなくても更新できます（Xにログイン済みであること）。失敗時は下の「表示分だけ」を使ってください。</p>
+    </section>
+
+    <section class="results" id="resultsSection">
+      <div class="tabs">
+        <button class="tab active" data-tab="new">新規 <span id="newCount">0</span></button>
+        <button class="tab" data-tab="lost">解除 <span id="lostCount">0</span></button>
+      </div>
+      <div class="list-container">
+        <ul id="userList" class="user-list"></ul>
+      </div>
+    </section>
+
+    <section class="footer-actions">
+      <button id="btnExport" class="btn text">エクスポート</button>
+      <button id="btnClear" class="btn text danger">データ削除</button>
+    </section>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+  <script src="js/popup.js"></script>
+</body>
+</html>
