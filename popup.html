@@ -1,67 +1,44 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>X Follower Tracker</title>
-  <link rel="stylesheet" href="css/popup.css" />
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>X Follower Tracker</h1>
-      <p class="subtitle">ページから取得 / ローカル保存</p>
-    </header>
+    <h1>X Follower Tracker</h1>
+    <p class="status" id="status">準備中...</p>
+    
+    <div class="stats">
+      <div>保存中: <strong id="savedCount">0</strong>人</div>
+      <div>新規: <strong id="newCount">0</strong></div>
+      <div>解除: <strong id="lostCount">0</strong></div>
+      <div>最終更新: <span id="lastUpdate">-</span></div>
+    </div>
 
-    <section class="dashboard" id="dashboard">
-      <div class="card-row">
-        <div class="card new">
-          <div class="card-num" id="dashNew">0</div>
-          <div class="card-label">新規フォロワー</div>
-        </div>
-        <div class="card lost">
-          <div class="card-num" id="dashLost">0</div>
-          <div class="card-label">解除された</div>
-        </div>
-      </div>
-      <div class="meta-row">
-        <span>保存数: <strong id="savedCount">0</strong></span>
-        <span>最終更新: <strong id="lastUpdate">未保存</strong></span>
-      </div>
-    </section>
+    <div class="progress" id="progress" style="display:none;">
+      <div class="bar" id="progressBar"></div>
+      <span id="progressText">0%</span>
+    </div>
 
-    <section class="status-card" id="statusCard">
-      <div id="pageStatus">読み込み中...</div>
-    </section>
+    <div class="buttons">
+      <button id="btnFullScan">フルスキャン開始（数万人対応）</button>
+      <button id="btnQuick">クイック（最新のみ）</button>
+      <button id="btnStop">停止</button>
+    </div>
 
-    <section class="actions">
-      <button id="btnScanLoaded" class="btn primary">表示分だけ取得</button>
-      <button id="btnAutoScan" class="btn secondary">ページを自動スクロールして全取得</button>
-      <button id="btnUpdate" class="btn secondary small" style="display:none">データ更新(自動)</button>
-      <p class="hint">
-        1. x.com/自分のID/followers を開く<br>
-        2. 「表示分だけ取得」または「自動スクロールして全取得」を押す<br>
-        3. 2回目以降の取得で「新規」「解除」が出ます
-      </p>
-    </section>
+    <div class="tabs">
+      <button class="tab active" data-tab="new">新規</button>
+      <button class="tab" data-tab="lost">解除</button>
+    </div>
+    <ul id="userList" class="user-list"></ul>
 
-    <section class="results" id="resultsSection">
-      <div class="tabs">
-        <button class="tab active" data-tab="new">新規 <span id="newCount">0</span></button>
-        <button class="tab" data-tab="lost">解除 <span id="lostCount">0</span></button>
-      </div>
-      <div class="list-container">
-        <ul id="userList" class="user-list"></ul>
-      </div>
-    </section>
-
-    <section class="footer-actions">
-      <button id="btnExport" class="btn text">エクスポート</button>
-      <button id="btnClear" class="btn text danger">データ削除</button>
-    </section>
-
-    <div id="toast" class="toast hidden"></div>
+    <div class="footer">
+      <button id="btnExport">JSONエクスポート</button>
+      <button id="btnClear">データ削除</button>
+    </div>
   </div>
-  <script src="js/popup.js"></script>
+  <script src="popup.js"></script>
 </body>
 </html>
