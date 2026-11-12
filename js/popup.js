@@ -8,7 +8,6 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => document.querySelectorAll(s);
 
-  let currentTab = null;
   let changesCache = { new: [], lost: [] };
 
   function showToast(msg, isError = false) {
@@ -16,7 +15,7 @@
     t.textContent = msg;
     t.classList.toggle('error', isError);
     t.classList.remove('hidden');
-    setTimeout(() => t.classList.add('hidden'), 2800);
+    setTimeout(() => t.classList.add('hidden'), 3000);
   }
 
   function formatDate(ts) {
@@ -36,30 +35,36 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function isFollowersLikeUrl(url) {
+    return /x\.com\/[^/]+\/(followers|verified_followers|following)|twitter\.com\/[^/]+\/(followers|verified_followers|following)/.test(url || '');
+  }
+
+  function usernameFromUrl(url) {
+    const m = (url || '').match(/(?:x|twitter)\.com\/([^/]+)\/(?:followers|verified_followers|following)/);
+    return m ? m[1] : null;
+  }
+
   async function loadDashboard() {
     const data = await chrome.storage.local.get([CURRENT_KEY, CHANGES_KEY]);
     const current = data[CURRENT_KEY];
     const changes = data[CHANGES_KEY] || { new: [], lost: [] };
     changesCache = changes;
 
-    const newCount = (changes.new || []).length;
-    const lostCount = (changes.lost || []).length;
-
-    $('#dashNew').textContent = newCount;
-    $('#dashLost').textContent = lostCount;
-    $('#newCount').textContent = newCount;
-    $('#lostCount').textContent = lostCount;
+    $('#dashNew').textContent = (changes.new || []).length;
+    $('#dashLost').textContent = (changes.lost || []).length;
+    $('#newCount').textContent = (changes.new || []).length;
+    $('#lostCount').textContent = (changes.lost || []).length;
 
     if (current && current.users) {
       $('#savedCount').textContent = current.users.length.toLocaleString();
       $('#lastUpdate').textContent = formatDate(current.timestamp);
-      if (current.username) {
-        $('#pageStatus').textContent = `@${current.username} のデータを保持中`;
-      }
+      $('#pageStatus').textContent = current.username
+        ? `@${current.username} のデータを保持中（${current.users.length}人）`
+        : `データを保持中（${current.users.length}人）`;
     } else {
       $('#savedCount').textContent = '0';
       $('#lastUpdate').textContent = '未保存';
-      $('#pageStatus').textContent = '「データを更新する」を押すと取得を開始します（Xにログイン済みである必要があります）';
+      $('#pageStatus').textContent = 'フォロワー一覧ページを開いて「表示分だけ」または「ページ自動取得」を押してください';
     }
     renderList('new');
   }
@@ -68,12 +73,10 @@
     const list = $('#userList');
     list.innerHTML = '';
     const items = type === 'new' ? (changesCache.new || []) : (changesCache.lost || []);
-
     if (items.length === 0) {
-      list.innerHTML = `<li class="empty">${type === 'new' ? '新規フォロワーはまだありません' : '解除されたフォロワーはまだありません'}<br><small>「データを更新する」で最新を取得してください</small></li>`;
+      list.innerHTML = `<li class="empty">${type === 'new' ? '新規はまだありません' : '解除はまだありません'}<br><small>ページから更新するとここに出ます</small></li>`;
       return;
     }
-
     items.slice(0, 120).forEach(item => {
       const u = item.user || item;
       const date = item.date ? formatDate(item.date) : '';
@@ -81,9 +84,7 @@
       const avatar = u.avatar
         ? `<img src="${u.avatar}" alt="" loading="lazy" />`
         : `<div style="width:32px;height:32px;border-radius:50%;background:#2f3336;flex-shrink:0"></div>`;
-      const badge = type === 'new'
-        ? '<span class="badge new">NEW</span>'
-        : '<span class="badge lost">解除</span>';
+      const badge = type === 'new' ? '<span class="badge new">NEW</span>' : '<span class="badge lost">解除</span>';
       li.innerHTML = `
         ${avatar}
         <div class="user-meta">
@@ -93,107 +94,110 @@
           </a>
           ${date ? `<div class="date-tag">${date}</div>` : ''}
         </div>
-        ${badge}
-      `;
+        ${badge}`;
       list.appendChild(li);
     });
   }
 
-  // One-click update via background (no need to open followers page)
-  async function oneClickUpdate() {
-    const btn = $('#btnUpdate');
-    btn.disabled = true;
-    btn.textContent = '取得中...';
-    showToast('ログインセッションでフォロワーを取得しています...');
-
-    try {
-      const res = await chrome.runtime.sendMessage({ action: 'oneClickUpdate', maxUsers: 4000 });
-      if (!res || !res.ok) {
-        // Fallback: try page-based scan if tab is on followers
-        if (res?.needPage) {
-          showToast('自動取得に失敗。フォロワーページを開いて「表示分だけ」を試してください', true);
-          $('#pageStatus').textContent = res.error || '自動取得失敗。ページから更新してください';
-        } else {
-          showToast(res?.error || '更新に失敗しました', true);
-        }
-        return;
-      }
-      await loadDashboard();
-      const msg = `更新完了 ${res.count}人 / 今回 新規+${res.addedThisTime || 0} 解除+${res.removedThisTime || 0}`;
-      showToast(msg);
-      $('#pageStatus').textContent = `@${res.username || ''} を更新しました`;
-    } catch (e) {
-      console.error(e);
-      showToast(e.message || 'エラーが発生しました', true);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'データを更新する';
-    }
-  }
-
-  // Fallback: page scrape
   async function pageScan(mode) {
-    currentTab = (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
-    if (!currentTab) {
-      showToast('アクティブなタブがありません', true);
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs[0];
+    if (!tab) {
+      showToast('タブが見つかりません', true);
       return;
     }
-    const url = currentTab.url || '';
-    if (!/x\.com\/[^/]+\/followers|twitter\.com\/[^/]+\/followers/.test(url)) {
-      showToast('フォロワー一覧ページを開いてから押してください', true);
+    if (!isFollowersLikeUrl(tab.url)) {
+      showToast('フォロワー（または認証済みフォロワー）の一覧ページを開いてください', true);
+      $('#pageStatus').textContent = '例: x.com/自分のID/followers を開いてから押す';
       return;
     }
 
     const btns = [$('#btnUpdate'), $('#btnScanLoaded'), $('#btnAutoScan')];
     btns.forEach(b => { if (b) b.disabled = true; });
-    showToast(mode === 'auto' ? 'ページをスクロールして取得中...' : '表示分を取得中...');
+    showToast(mode === 'auto' ? 'スクロールして取得中…（そのまま待ってください）' : '表示中のユーザーを取得中…');
 
     try {
       try {
-        await chrome.tabs.sendMessage(currentTab.id, { action: 'ping' });
+        await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
       } catch {
-        await chrome.scripting.executeScript({ target: { tabId: currentTab.id }, files: ['js/content.js'] });
-        await new Promise(r => setTimeout(r, 400));
+        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['js/content.js'] });
+        await new Promise(r => setTimeout(r, 500));
       }
-      const action = mode === 'auto' ? 'autoScan' : 'extractLoaded';
-      const res = await chrome.tabs.sendMessage(currentTab.id, { action, maxScrolls: 70 });
-      if (!res || !res.ok) throw new Error(res?.error || '取得失敗');
 
-      // Commit via storage (reuse same logic as background)
+      const res = await chrome.tabs.sendMessage(tab.id, {
+        action: mode === 'auto' ? 'autoScan' : 'extractLoaded',
+        maxScrolls: 90
+      });
+      if (!res || !res.ok) throw new Error(res?.error || '取得に失敗しました');
+
+      const users = res.users || [];
+      if (users.length === 0) {
+        showToast('ユーザーが0件でした。少しスクロールしてから再度「表示分だけ」を押してください', true);
+        return;
+      }
+
+      const uname = usernameFromUrl(tab.url) || 'unknown';
       const data = await chrome.storage.local.get([CURRENT_KEY, CHANGES_KEY]);
       const prev = data[CURRENT_KEY] || null;
       const changes = data[CHANGES_KEY] || { new: [], lost: [] };
-      const users = res.users || [];
+
       const snapshot = {
-        username: (url.match(/x\.com\/([^/]+)\/followers/) || [])[1] || 'unknown',
+        username: uname,
         users,
         count: users.length,
         timestamp: Date.now()
       };
-      if (prev && prev.users) {
+
+      let added = 0, removed = 0;
+      if (prev && prev.users && prev.users.length) {
         const oldMap = new Map(prev.users.map(u => [u.username.toLowerCase(), u]));
         const newMap = new Map(users.map(u => [u.username.toLowerCase(), u]));
         const now = Date.now();
-        for (const [k, u] of newMap) if (!oldMap.has(k)) changes.new.unshift({ user: u, date: now });
-        for (const [k, u] of oldMap) if (!newMap.has(k)) changes.lost.unshift({ user: u, date: now });
+        for (const [k, u] of newMap) {
+          if (!oldMap.has(k)) {
+            changes.new.unshift({ user: u, date: now });
+            added++;
+          }
+        }
+        for (const [k, u] of oldMap) {
+          if (!newMap.has(k)) {
+            changes.lost.unshift({ user: u, date: now });
+            removed++;
+          }
+        }
         if (changes.new.length > 400) changes.new.length = 400;
         if (changes.lost.length > 400) changes.lost.length = 400;
       }
-      await chrome.storage.local.set({ [PREV_KEY]: prev, [CURRENT_KEY]: snapshot, [CHANGES_KEY]: changes });
+
+      await chrome.storage.local.set({
+        [PREV_KEY]: prev,
+        [CURRENT_KEY]: snapshot,
+        [CHANGES_KEY]: changes
+      });
+
       await loadDashboard();
-      showToast(`ページから更新: ${users.length}人`);
+      const msg = prev
+        ? `保存 ${users.length}人 / 今回 新規+${added} 解除+${removed}`
+        : `初回保存: ${users.length}人（次回更新から差分が出ます）`;
+      showToast(msg);
     } catch (e) {
+      console.error(e);
       showToast(e.message || 'エラー', true);
     } finally {
       btns.forEach(b => { if (b) b.disabled = false; });
     }
   }
 
-  // Events
+  // One-click is secondary now; main path is page scan
+  async function oneClickUpdate() {
+    showToast('自動取得は不安定なため、下の「表示分だけ」か「ページ自動取得」を使ってください', true);
+    $('#pageStatus').textContent = 'フォロワー一覧を開いた状態で「表示分だけ」または「ページ自動取得」を押してください';
+  }
+
   $('#btnUpdate').addEventListener('click', () => oneClickUpdate());
   $('#btnScanLoaded').addEventListener('click', () => pageScan('loaded'));
   $('#btnAutoScan').addEventListener('click', () => {
-    if (!confirm('フォロワーページ上で自動スクロール取得しますか？')) return;
+    if (!confirm('ページを下に自動スクロールしてフォロワーを集めます。実行しますか？')) return;
     pageScan('auto');
   });
 
@@ -222,7 +226,7 @@
   });
 
   $('#btnClear').addEventListener('click', async () => {
-    if (!confirm('すべての保存データと履歴を削除しますか？')) return;
+    if (!confirm('保存データと履歴をすべて削除しますか？')) return;
     await chrome.storage.local.remove([CURRENT_KEY, PREV_KEY, CHANGES_KEY]);
     changesCache = { new: [], lost: [] };
     await loadDashboard();
@@ -231,7 +235,12 @@
 
   (async () => {
     await loadDashboard();
-    // Enable main button always (one-click)
-    $('#btnUpdate').disabled = false;
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs[0];
+    if (tab && isFollowersLikeUrl(tab.url)) {
+      $('#pageStatus').textContent = 'このページから取得できます。「表示分だけ」または「ページ自動取得」を押してください';
+      $('#btnScanLoaded').disabled = false;
+      $('#btnAutoScan').disabled = false;
+    }
   })();
 })();

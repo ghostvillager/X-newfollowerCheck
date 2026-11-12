@@ -1,18 +1,16 @@
 {
   "manifest_version": 3,
   "name": "X Follower Tracker",
-  "version": "1.2.0",
-  "description": "ボタン1つで新規・解除フォロワーを更新。APIキー不要・ローカル保存。",
+  "version": "1.3.0",
+  "description": "フォロワーページから新規・解除を取得。ローカル保存。APIなし。",
   "permissions": [
     "storage",
     "activeTab",
-    "scripting",
-    "cookies"
+    "scripting"
   ],
   "host_permissions": [
     "https://x.com/*",
-    "https://twitter.com/*",
-    "https://api.x.com/*"
+    "https://twitter.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -29,12 +27,15 @@
   "content_scripts": [
     {
       "matches": [
-        "https://x.com/*",
-        "https://twitter.com/*"
+        "https://x.com/*/followers*",
+        "https://x.com/*/verified_followers*",
+        "https://x.com/*/following*",
+        "https://twitter.com/*/followers*",
+        "https://twitter.com/*/verified_followers*",
+        "https://twitter.com/*/following*"
       ],
       "js": ["js/content.js"],
-      "run_at": "document_start",
-      "all_frames": false
+      "run_at": "document_idle"
     }
   ],
   "icons": {
