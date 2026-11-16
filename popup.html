@@ -9,6 +9,19 @@
   <div class="container">
     <h1>X Follower Tracker</h1>
     <p class="status" id="status">準備中...</p>
+
+    <div class="account-bar">
+      <label for="accountSelect">アカウント:</label>
+      <select id="accountSelect"></select>
+      <button id="btnDetect" title="現在ログイン中のアカウントを確認（x.comを開いた状態で）">検出</button>
+      <button id="btnRename" title="選択中アカウントの表示名を変更">名前変更</button>
+      <button id="btnDeleteAccount" class="danger" title="選択中のアカウントデータを削除">削除</button>
+    </div>
+
+    <div class="folder-bar">
+      <span id="folderLabel">Native Host 確認中...</span>
+      <button id="btnCheckNative" title="接続再確認">再接続</button>
+    </div>
     
     <div class="stats">
       <div>保存中: <strong id="savedCount">0</strong>人</div>
@@ -23,8 +36,8 @@
     </div>
 
     <div class="buttons">
-      <button id="btnFullScan">フルスキャン開始（数万人対応）</button>
-      <button id="btnQuick">クイック（最新のみ）</button>
+      <button id="btnFullScan">フルスキャン開始</button>
+      <button id="btnQuick">クイック（最新）</button>
       <button id="btnStop">停止</button>
     </div>
 
@@ -35,9 +48,18 @@
     <ul id="userList" class="user-list"></ul>
 
     <div class="footer">
-      <button id="btnExport">JSONエクスポート</button>
-      <button id="btnClear">データ削除</button>
+      <button id="btnExportOne" title="アカウント名_日時.json を拡張機能フォルダ/json に保存">このアカウント出力</button>
+      <button id="btnExportAll" title="all_日時.json を保存">全出力</button>
+      <button id="btnImportLatest" title="jsonフォルダ内の最新を読込">最新読込</button>
+      <button id="btnImport" title="任意のJSONを選択して読込">ファイル読込</button>
+      <button id="btnClear" class="danger">全削除</button>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none">
     </div>
+    <p class="hint">
+      同人ダウンローダーと同じ方式です。<br>
+      <code>セットアップ.bat</code> でレジストリ登録 → 拡張機能IDを host json に記入。<br>
+      保存先: <code>拡張機能フォルダ/json/アカウント名_日時.json</code>
+    </p>
   </div>
   <script src="popup.js"></script>
 </body>

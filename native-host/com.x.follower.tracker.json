@@ -1,0 +1,9 @@
+{
+  "name": "com.x.follower.tracker",
+  "description": "X Follower Tracker Native Host - json folder I/O",
+  "path": "I:\\ドキュメント\\拡張機能一覧(webを開く)\\X(フォロワー確認)\\native-host\\native-host.bat",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://kdddhgpmejdkgeoibgildenppmifphne/"
+  ]
+}

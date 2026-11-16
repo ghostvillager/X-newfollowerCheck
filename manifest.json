@@ -1,13 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "X Follower Tracker (Large Scale)",
-  "version": "2.0.0",
-  "description": "数万人規模のフォロワーを内部APIで取得・差分管理。DOMスクロール不要。",
+  "name": "X Follower Tracker (Multi-account)",
+  "version": "2.3.1",
+  "description": "数万人規模のフォロワーを内部APIで取得・差分管理。拡張機能フォルダ内 json にNative Messagingで保存。",
   "permissions": [
     "storage",
     "cookies",
     "activeTab",
-    "tabs"
+    "tabs",
+    "nativeMessaging",
+    "scripting"
   ],
   "host_permissions": [
     "https://x.com/*",
